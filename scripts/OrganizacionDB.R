@@ -12,7 +12,7 @@ rm(list = ls())
 
 # Especificar Directorio
 
-directorio_destino <- "C:/Users/sandr/Documents/GitHub/BIG DATA/"
+directorio_destino <- "stores/"
 
 # Cargando librerias y paquetes necesarios 
 
@@ -32,11 +32,11 @@ p_load( tidyverse, # tidy-data
 
 # Importando los datos 
 
-train_personas <- read.csv("data/train_personas.csv")
-train_hogares <- read.csv("data/train_hogares.csv")
-test_personas <- read.csv(("data/test_personas.csv"))
-test_hogares <- read.csv("data/test_hogares.csv")
-sample_submission <- read.csv("data/sample_submission.csv")
+train_personas <- read.csv("stores/train_personas.csv")
+train_hogares <- read.csv("stores/train_hogares.csv")
+test_personas <- read.csv(("stores/test_personas.csv"))
+test_hogares <- read.csv("stores/test_hogares.csv")
+sample_submission <- read.csv("stores/sample_submission.csv")
 
 
 # Unión de las bases 
@@ -225,3 +225,6 @@ for (obj in objetos) {
   rm(database)
   
 }
+
+write.csv(train, "stores\\train_definitivo.csv", row.names=FALSE)
+write.csv(test, "stores\\test_definitivo.csv", row.names=FALSE)
