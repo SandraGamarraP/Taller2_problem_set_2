@@ -289,9 +289,9 @@ for (obj in objetos) {
   
   database <- subset(database, select = c("id", "Orden", "Clase",
                                           "ciudad", "edad", "edad_2","ocupado", "mujer", 
-                                          "estudiante", "busca_trabajo", "ama_casa",
-                                          "hijos_hogar", "primaria", "secundaria",
-                                          "media", "superior", "Ingtot",
+                                          "estudiante", "busca_trabajo","jefe_hogar", 
+                                          "ama_casa", "hijos_hogar", "primaria", 
+                                          "secundaria", "media", "superior", "Ingtot",
                                           "Ingtotug", "exp_trabajo_actual",
                                           "horas_trab_semana", "Pobre", 
                                           "numero_personas", "arrienda"))
@@ -303,10 +303,11 @@ for (obj in objetos) {
   database <- database %>% group_by(id) %>%
     summarize(edad = mean(edad),
               edad_2 = mean(edad_2),
-              ocupado = sum(ocupado),
-              mujer = sum(mujer), #mean
+              ocupado = mean(ocupado), #mean
+              mujer = mean(mujer), #mean
               estudiante = mean(estudiante),
               busca_trabajo = mean(busca_trabajo),
+              jefe_hogar = mean(jefe_hogar),
               ama_casa =mean(ama_casa),
               hijos_hogar = mean(hijos_hogar),
               primaria = mean(primaria),
