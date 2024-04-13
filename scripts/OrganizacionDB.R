@@ -128,6 +128,17 @@ ggplot(datos_miss_per, aes(x = reorder(skim_variable, +p_missing) , y =  p_missi
 train <- left_join(train_personas,train_hogares)
 test <- left_join(test_personas,test_hogares)
 
+# mirar si se realizó bien la unión
+train %>% 
+  group_by(id) %>% 
+  summarise(count = n()) %>% 
+  summary()
+
+test %>% 
+  group_by(id) %>% 
+  summarise(count = n()) %>% 
+  summary()
+
 # Creando las variables faltantes 
 
 test$Pobre <- NA
@@ -152,7 +163,6 @@ for (obj in objetos) {
   database$ocupado <- ifelse(database$Oc == 1, 1, 0)
   database$ocupado[database$Oc != 1] <- 0
   database$ocupado[is.na(database$ocupado)] <- 0
-  
   
   # Género
   
@@ -224,7 +234,7 @@ for (obj in objetos) {
   
   # Experiencia trabajo actual
   
-  database <- rename(database, c("exp_trabajo_actual" = "P6426"))
+  database <- rename(database, c("exp_trab_actual" = "P6426"))
   
   # Horas de trabajo a la semana
   
@@ -245,24 +255,24 @@ for (obj in objetos) {
   
   # Imputación de experiencia
   
-  database$exp_trabajo_actual <- ifelse(database$edad < 18 & 
-                                          is.na(database$exp_trabajo_actual), 0, 
-                                        database$exp_trabajo_actual)
+  database$exp_trab_actual <- ifelse(database$edad < 18 & 
+                                       is.na(database$exp_trab_actual), 0, 
+                                     database$exp_trab_actual)
   
   database <- database %>% 
     group_by(id) %>% 
-    mutate(mean_experiencia = mean(exp_trabajo_actual, na.rm = TRUE)) %>% 
+    mutate(mean_exp = mean(exp_trab_actual, na.rm = TRUE)) %>% 
     ungroup() %>% 
-    mutate(exp_trabajo_actual = if_else(is.na(exp_trabajo_actual) & database$edad >= 18, 
-                                        mean_experiencia, database$exp_trabajo_actual))
+    mutate(exp_trab_actual = if_else(is.na(exp_trab_actual) & database$edad >= 18, 
+                                     mean_exp, database$exp_trab_actual))
   
   database <- database %>% 
     group_by(id) %>% 
-    mutate(variable = ifelse(all(is.na(exp_trabajo_actual)), 0, 
-                             exp_trabajo_actual)) %>% 
+    mutate(variable = ifelse(all(is.na(exp_trab_actual)), 0, 
+                             exp_trab_actual)) %>% 
     ungroup() %>% 
-    mutate(experiencia_trab_actual = if_else(is.na(exp_trabajo_actual), 
-                                             variable, database$exp_trabajo_actual))
+    mutate(exp_trab_actual = if_else(is.na(exp_trab_actual), 
+                                     variable, database$exp_trab_actual))
   
   # Imputación de Horas trabajadas a la semana
   
@@ -292,7 +302,7 @@ for (obj in objetos) {
                                           "estudiante", "busca_trabajo","jefe_hogar", 
                                           "ama_casa", "hijos_hogar", "primaria", 
                                           "secundaria", "media", "superior", "Ingtot",
-                                          "Ingtotug", "exp_trabajo_actual",
+                                          "Ingtotug", "exp_trab_actual",
                                           "horas_trab_semana", "Pobre", 
                                           "numero_personas", "arrienda"))
   
@@ -316,7 +326,7 @@ for (obj in objetos) {
               superior = mean(superior),
               Ingtot = sum(Ingtot), #Se suma porque es por individuo
               Ingtotug = mean(Ingtotug), # se promedia porque es por hogar
-              exp_trabajo_actual = mean(exp_trabajo_actual),
+              exp_trab_actual = mean(exp_trab_actual),
               horas_trab_semana = mean(horas_trab_semana),
               Pobre = mean(Pobre),
               numero_personas = sum(numero_personas),
@@ -328,4 +338,46 @@ for (obj in objetos) {
   rm(database)
   
 }
+
+# Compruebo que la imputación y base haya quedado sin missing
+# Ver variables con datos missing en la base completa train
+datos_miss_train <- skim(train) %>% select( skim_variable, n_missing)
+
+Nobs= nrow(train) 
+Nobs
+
+datos_miss_train<- datos_miss_train %>% mutate(p_missing= n_missing/Nobs)
+head(datos_miss_train)
+
+# Ordenar variables con mayor número de missing
+datos_miss_train <- datos_miss_train %>% arrange(-n_missing)
+datos_miss_train <- datos_miss_train %>% filter(n_missing!= 0)
+
+#Visualizando la estructura de los missing
+ggplot(datos_miss_train, aes(x = reorder(skim_variable, +p_missing) , y =  p_missing)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  coord_flip() +
+  labs(title = "N Missing Per Variable", x = "Var Name", y = "Missings")+ 
+  theme(axis.text = element_text(size = 5)) 
+
+# Ver variables con datos missing en la base completa test
+datos_miss_test <- skim(test) %>% select( skim_variable, n_missing)
+
+Nobs= nrow(test) 
+Nobs
+
+datos_miss_test <- datos_miss_test %>% mutate(p_missing= n_missing/Nobs)
+head(datos_miss_test)
+
+# Ordenar variables con mayor número de missing
+datos_miss_test <- datos_miss_test %>% arrange(-n_missing)
+datos_miss_test<- datos_miss_test %>% filter(n_missing!= 0)
+
+#Visualizando la estructura de los missing
+ggplot(datos_miss_test, aes(x = reorder(skim_variable, +p_missing) , y =  p_missing)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  coord_flip() +
+  labs(title = "N Missing Per Variable", x = "Var Name", y = "Missings")+ 
+  theme(axis.text = element_text(size = 5)) 
+
 ############
