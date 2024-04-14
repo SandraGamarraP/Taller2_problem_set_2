@@ -123,221 +123,418 @@ ggplot(datos_miss_per, aes(x = reorder(skim_variable, +p_missing) , y =  p_missi
   theme(axis.text = element_text(size = 5)) 
 
 
-# Unión de las bases 
+#############################################
 
-train <- left_join(train_personas,train_hogares)
-test <- left_join(test_personas,test_hogares)
+## En la base train_personas organizo las variables de interés
 
-# mirar si se realizó bien la unión
-train %>% 
+# en la base train_personas
+
+# En Edad solo seleccionamos los mayores de 18 años
+
+train_personas <- rename(train_personas, c("edad" = "P6040"))
+train_personas$edad_2 <- train_personas$edad^2
+
+# Ocupado 
+train_personas$ocupado <- ifelse(train_personas$Oc == 1, 1, 0)
+train_personas$ocupado[train_personas$Oc != 1] <- 0
+train_personas$ocupado[is.na(train_personas$ocupado)] <- 0
+
+
+# Género
+
+train_personas$mujer <- ifelse(train_personas$P6020 == 2, 1, 0)
+train_personas$mujer[train_personas$P6020 == 1] <- 0
+
+# Estudiante
+
+train_personas$estudiante <- ifelse(train_personas$P6240 == 3, 1, 0)
+train_personas$estudiante[train_personas$P6240 != 3] <- 0
+train_personas$estudiante[train_personas$P6240 == "."] <- 0
+train_personas$estudiante[is.na(train_personas$estudiante)] <- 0
+
+# Busca trabajo
+
+train_personas$busca_trabajo <- ifelse(train_personas$P6240 == 2, 1, 0)
+train_personas$busca_trabajo[train_personas$P6240 != 2] <- 0
+train_personas$busca_trabajo[train_personas$P6240 == "."] <- 0
+train_personas$busca_trabajo[is.na(train_personas$busca_trabajo)] <- 0
+
+# Ama de casa
+
+train_personas$ama_casa <- ifelse(train_personas$P6240 == 4, 1, 0)
+train_personas$ama_casa[train_personas$P6240 != 4] <- 0
+train_personas$ama_casa[train_personas$P6240 == "."] <- 0
+train_personas$ama_casa[is.na(train_personas$ama_casa)] <- 0
+
+# Jefe del hogar
+train_personas$jefe_hogar <- ifelse(train_personas$P6050 == 1, 1, 0)
+train_personas$jefe_hogar[train_personas$P6050 != 1] <- 0
+train_personas$jefe_hogar[train_personas$P6050 == "."] <- 0
+train_personas$jefe_hogar[is.na(train_personas$jefe_hogar)] <- 0
+
+# Hijos en el hogar
+
+train_personas$hijos_hogar <- ifelse(train_personas$P6050 == 3, 1, 0)
+train_personas$hijos_hogar[train_personas$P6050 != 3] <- 0
+train_personas$hijos_hogar[train_personas$P6050 == "."] <- 0
+train_personas$hijos_hogar[is.na(train_personas$hijos_hogar)] <- 0
+
+# Nivel Primaria
+
+train_personas$primaria <- ifelse(train_personas$P6210 == 1, 1, 0)
+train_personas$primaria[train_personas$P6210 == "."] <- 0
+train_personas$primaria[is.na(train_personas$primaria)] <- 0
+
+# Nivel Secundaria
+
+train_personas$secundaria <- ifelse(train_personas$P6210 == 4, 1, 0)
+train_personas$secundaria[train_personas$P6210 == "."] <- 0
+train_personas$secundaria[is.na(train_personas$secundaria)] <- 0
+
+# Nivel Media
+
+train_personas$media <- ifelse(train_personas$P6210 == 5, 1, 0)
+train_personas$media[train_personas$P6210 == "."] <- 0
+train_personas$media[is.na(train_personas$media)] <- 0
+
+# Nivel Superior
+
+train_personas$superior <- ifelse(train_personas$P6210 == 6, 1, 0)
+train_personas$superior[train_personas$P6210 == "."] <- 0
+train_personas$superior[is.na(train_personas$superior)] <- 0
+
+# Experiencia trabajo actual
+
+train_personas <- rename(train_personas, c("exp_trab_actual" = "P6426"))
+
+# Horas de trabajo a la semana
+
+train_personas <- rename(train_personas, c("horas_trab_semana" = "P6800"))
+
+
+# Ciudad
+
+train_personas <- rename(train_personas, c("ciudad" = "Dominio"))
+
+
+
+# Imputación de experiencia
+
+train_personas$exp_trab_actual <- ifelse(train_personas$edad < 18 & 
+                                           is.na(train_personas$exp_trab_actual), 0, 
+                                         train_personas$exp_trab_actual)
+
+train_personas <- train_personas %>% 
   group_by(id) %>% 
-  summarise(count = n()) %>% 
-  summary()
+  mutate(mean_exp = mean(exp_trab_actual, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(exp_trab_actual = if_else(is.na(exp_trab_actual) & train_personas$edad >= 18, 
+                                   mean_exp, train_personas$exp_trab_actual))
 
-test %>% 
+train_personas <- train_personas %>% 
   group_by(id) %>% 
-  summarise(count = n()) %>% 
-  summary()
+  mutate(variable = ifelse(all(is.na(exp_trab_actual)), 0, 
+                           exp_trab_actual)) %>% 
+  ungroup() %>% 
+  mutate(exp_trab_actual = if_else(is.na(exp_trab_actual), 
+                                   variable, train_personas$exp_trab_actual))
 
-# Creando las variables faltantes 
+# Imputación de Horas trabajadas a la semana
 
-test$Pobre <- NA
-test$Ingtot <- NA
-test$Ingtotug <- NA
+train_personas$horas_trab_semana <- ifelse(train_personas$edad < 18 & 
+                                             is.na(train_personas$horas_trab_semana), 0, 
+                                           train_personas$horas_trab_semana)
+
+train_personas <- train_personas %>% 
+  group_by(id) %>% 
+  mutate(mean_h = mean(horas_trab_semana, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(horas_trab_semana = if_else(is.na(horas_trab_semana) & train_personas$edad >= 18, 
+                                     mean_h, train_personas$horas_trab_semana))
+
+train_personas <- train_personas %>% 
+  group_by(id) %>% 
+  mutate(variable = ifelse(all(is.na(horas_trab_semana)), 0, 
+                           horas_trab_semana)) %>% 
+  ungroup() %>% 
+  mutate(horas_trab_semana = if_else(is.na(horas_trab_semana), 
+                                     variable, train_personas$horas_trab_semana))
+
+#Nos quedamos con las variables de interés
+
+train_personas <- subset(train_personas, select = c("id", "Orden", "Clase",
+                                                    "ciudad", "edad", "edad_2","ocupado", "mujer", 
+                                                    "estudiante", "busca_trabajo","jefe_hogar", 
+                                                    "ama_casa", "hijos_hogar", "primaria", 
+                                                    "secundaria", "media", "superior", "Ingtot",
+                                                    "exp_trab_actual",
+                                                    "horas_trab_semana"))
+
+train_personas$num_menores <- as.numeric(train_personas$edad < 18)
+
+# Pasar la base únicamente a hogares
+
+train_personas_hogar <- train_personas %>% group_by(id) %>%
+  summarize(edad = mean(edad),
+            edad_2 = mean(edad_2),
+            ocupado = mean(ocupado), #mean
+            mujer = mean(mujer), #mean
+            estudiante = mean(estudiante),
+            busca_trabajo = mean(busca_trabajo),
+            jefe_hogar = mean(jefe_hogar),
+            ama_casa =mean(ama_casa),
+            hijos_hogar = mean(hijos_hogar),
+            primaria = mean(primaria),
+            secundaria = mean(secundaria),
+            media = mean(media),
+            superior = mean(superior),
+            Ingtot = sum(Ingtot), #Se suma porque es por individuo
+            exp_trab_actual = mean(exp_trab_actual),
+            horas_trab_semana = mean(horas_trab_semana),
+            num_menores = sum(num_menores),
+            ciudad = first(ciudad))
+
+############
+## En la base train_hogares organizo las variables de interés
+
+# en la base train_hogares
 
 # Limpiando la base de datos
 
-objetos <- c("train", "test")
+# Arrienda
+train_hogares$arrienda <- ifelse(train_hogares$P5090 == 3, 1, 0)
+train_hogares$arrienda[train_hogares$P5090 != 3] <- 0
+train_hogares$arrienda[is.na(train_hogares$arrienda)] <- 0
 
-for (obj in objetos) {
-  
-  database <- get(obj)
-  
-  
-  # En Edad solo seleccionamos los mayores de 18 años
-  
-  database <- rename(database, c("edad" = "P6040"))
-  database$edad_2 <- database$edad^2
-  
-  # Ocupado 
-  database$ocupado <- ifelse(database$Oc == 1, 1, 0)
-  database$ocupado[database$Oc != 1] <- 0
-  database$ocupado[is.na(database$ocupado)] <- 0
-  
-  # Género
-  
-  database$mujer <- ifelse(database$P6020 == 2, 1, 0)
-  database$mujer[database$P6020 == 1] <- 0
-  
-  # Estudiante
-  
-  database$estudiante <- ifelse(database$P6240 == 3, 1, 0)
-  database$estudiante[database$P6240 != 3] <- 0
-  database$estudiante[database$P6240 == "."] <- 0
-  database$estudiante[is.na(database$estudiante)] <- 0
-  
-  # Busca trabajo
-  
-  database$busca_trabajo <- ifelse(database$P6240 == 2, 1, 0)
-  database$busca_trabajo[database$P6240 != 2] <- 0
-  database$busca_trabajo[database$P6240 == "."] <- 0
-  database$busca_trabajo[is.na(database$busca_trabajo)] <- 0
-  
-  # Ama de casa
-  
-  database$ama_casa <- ifelse(database$P6240 == 4, 1, 0)
-  database$ama_casa[database$P6240 != 4] <- 0
-  database$ama_casa[database$P6240 == "."] <- 0
-  database$ama_casa[is.na(database$ama_casa)] <- 0
-  
-  # Jefe del hogar
-  database$jefe_hogar <- ifelse(database$P6050 == 1, 1, 0)
-  database$jefe_hogar[database$P6050 != 1] <- 0
-  database$jefe_hogar[database$P6050 == "."] <- 0
-  database$jefe_hogar[is.na(database$jefe_hogar)] <- 0
-  
-  # Hijos en el hogar
-  
-  database$hijos_hogar <- ifelse(database$P6050 == 3, 1, 0)
-  database$hijos_hogar[database$P6050 != 3] <- 0
-  database$hijos_hogar[database$P6050 == "."] <- 0
-  database$hijos_hogar[is.na(database$hijos_hogar)] <- 0
-  
-  # Nivel Primaria
-  
-  database$primaria <- ifelse(database$P6210 == 1, 1, 0)
-  database$primaria[database$P6210 == "."] <- 0
-  database$primaria[is.na(database$primaria)] <- 0
-  
-  # Nivel Secundaria
-  
-  database$secundaria <- ifelse(database$P6210 == 4, 1, 0)
-  database$secundaria[database$P6210 == "."] <- 0
-  database$secundaria[is.na(database$secundaria)] <- 0
-  
-  # Nivel Media
-  
-  database$media <- ifelse(database$P6210 == 5, 1, 0)
-  database$media[database$P6210 == "."] <- 0
-  database$media[is.na(database$media)] <- 0
-  
-  # Nivel Superior
-  
-  database$superior <- ifelse(database$P6210 == 6, 1, 0)
-  database$superior[database$P6210 == "."] <- 0
-  database$superior[is.na(database$superior)] <- 0
-  
-  # Arrienda
-  database$arrienda <- ifelse(database$P5090 == 3, 1, 0)
-  database$arrienda[database$P5090 != 3] <- 0
-  database$arrienda[is.na(database$arrienda)] <- 0
-  
-  # Experiencia trabajo actual
-  
-  database <- rename(database, c("exp_trab_actual" = "P6426"))
-  
-  # Horas de trabajo a la semana
-  
-  database <- rename(database, c("horas_trab_semana" = "P6800"))
-  
-  
-  # Ciudad
-  
-  database <- rename(database, c("ciudad" = "Dominio"))
-  
-  # Número de Cuartos
-  
-  database <- rename(database, c("numero_cuartos" = "P5010"))
-  
-  # Número de personas
-  
-  database <- rename(database, c("numero_personas" = "Nper"))
-  
-  # Imputación de experiencia
-  
-  database$exp_trab_actual <- ifelse(database$edad < 18 & 
-                                       is.na(database$exp_trab_actual), 0, 
-                                     database$exp_trab_actual)
-  
-  database <- database %>% 
-    group_by(id) %>% 
-    mutate(mean_exp = mean(exp_trab_actual, na.rm = TRUE)) %>% 
-    ungroup() %>% 
-    mutate(exp_trab_actual = if_else(is.na(exp_trab_actual) & database$edad >= 18, 
-                                     mean_exp, database$exp_trab_actual))
-  
-  database <- database %>% 
-    group_by(id) %>% 
-    mutate(variable = ifelse(all(is.na(exp_trab_actual)), 0, 
-                             exp_trab_actual)) %>% 
-    ungroup() %>% 
-    mutate(exp_trab_actual = if_else(is.na(exp_trab_actual), 
-                                     variable, database$exp_trab_actual))
-  
-  # Imputación de Horas trabajadas a la semana
-  
-  database$horas_trab_semana <- ifelse(database$edad < 18 & 
-                                         is.na(database$horas_trab_semana), 0, 
-                                       database$horas_trab_semana)
-  
-  database <- database %>% 
-    group_by(id) %>% 
-    mutate(mean_h = mean(horas_trab_semana, na.rm = TRUE)) %>% 
-    ungroup() %>% 
-    mutate(horas_trab_semana = if_else(is.na(horas_trab_semana) & database$edad >= 18, 
-                                       mean_h, database$horas_trab_semana))
-  
-  database <- database %>% 
-    group_by(id) %>% 
-    mutate(variable = ifelse(all(is.na(horas_trab_semana)), 0, 
-                             horas_trab_semana)) %>% 
-    ungroup() %>% 
-    mutate(horas_trab_semana = if_else(is.na(horas_trab_semana), 
-                                       variable, database$horas_trab_semana))
-  
-  
-  
-  database <- subset(database, select = c("id", "Orden", "Clase",
-                                          "ciudad", "edad", "edad_2","ocupado", "mujer", 
-                                          "estudiante", "busca_trabajo","jefe_hogar", 
-                                          "ama_casa", "hijos_hogar", "primaria", 
-                                          "secundaria", "media", "superior", "Ingtot",
-                                          "Ingtotug", "exp_trab_actual",
-                                          "horas_trab_semana", "Pobre", 
-                                          "numero_personas", "arrienda"))
-  
-  database$num_menores <- as.numeric(database$edad < 18)
-  
-  # Pasar la base únicamente a hogares
-  
-  database <- database %>% group_by(id) %>%
-    summarize(edad = mean(edad),
-              edad_2 = mean(edad_2),
-              ocupado = mean(ocupado), #mean
-              mujer = mean(mujer), #mean
-              estudiante = mean(estudiante),
-              busca_trabajo = mean(busca_trabajo),
-              jefe_hogar = mean(jefe_hogar),
-              ama_casa =mean(ama_casa),
-              hijos_hogar = mean(hijos_hogar),
-              primaria = mean(primaria),
-              secundaria = mean(secundaria),
-              media = mean(media),
-              superior = mean(superior),
-              Ingtot = sum(Ingtot), #Se suma porque es por individuo
-              Ingtotug = mean(Ingtotug), # se promedia porque es por hogar
-              exp_trab_actual = mean(exp_trab_actual),
-              horas_trab_semana = mean(horas_trab_semana),
-              Pobre = mean(Pobre),
-              numero_personas = sum(numero_personas),
-              num_menores = sum(num_menores),
-              arrienda = mean(arrienda),
-              ciudad = first(ciudad))
-  
-  assign(obj, database)
-  rm(database)
-  
-}
+# Ciudad
+
+train_hogares <- rename(train_hogares, c("ciudad" = "Dominio"))
+
+# Número de Cuartos
+
+train_hogares <- rename(train_hogares, c("numero_cuartos" = "P5010"))
+
+# Número de personas
+
+train_hogares <- rename(train_hogares, c("numero_personas" = "Nper"))
+
+# Nos quedamos con las variables de interés
+train_hogares_final <- subset(train_hogares, select = c("id", "Clase",
+                                                        "ciudad", "Ingtotug",  "Pobre", 
+                                                        "numero_personas", "arrienda"))
+
+
+# Haciendo join sobre la base train
+train <- left_join(train_personas_hogar,train_hogares_final)
+###########################
+
+# Ahora organizamos para la base test_personas y test_hogares
+# Para test personas
+# En Edad solo seleccionamos los mayores de 18 años
+
+test_personas <- rename(test_personas, c("edad" = "P6040"))
+test_personas$edad_2 <- test_personas$edad^2
+
+# Ocupado 
+test_personas$ocupado <- ifelse(test_personas$Oc == 1, 1, 0)
+test_personas$ocupado[test_personas$Oc != 1] <- 0
+test_personas$ocupado[is.na(test_personas$ocupado)] <- 0
+
+
+# Género
+
+test_personas$mujer <- ifelse(test_personas$P6020 == 2, 1, 0)
+test_personas$mujer[test_personas$P6020 == 1] <- 0
+
+# Estudiante
+
+test_personas$estudiante <- ifelse(test_personas$P6240 == 3, 1, 0)
+test_personas$estudiante[test_personas$P6240 != 3] <- 0
+test_personas$estudiante[test_personas$P6240 == "."] <- 0
+test_personas$estudiante[is.na(test_personas$estudiante)] <- 0
+
+# Busca trabajo
+
+test_personas$busca_trabajo <- ifelse(test_personas$P6240 == 2, 1, 0)
+test_personas$busca_trabajo[test_personas$P6240 != 2] <- 0
+test_personas$busca_trabajo[test_personas$P6240 == "."] <- 0
+test_personas$busca_trabajo[is.na(test_personas$busca_trabajo)] <- 0
+
+# Ama de casa
+
+test_personas$ama_casa <- ifelse(test_personas$P6240 == 4, 1, 0)
+test_personas$ama_casa[test_personas$P6240 != 4] <- 0
+test_personas$ama_casa[test_personas$P6240 == "."] <- 0
+test_personas$ama_casa[is.na(test_personas$ama_casa)] <- 0
+
+# Jefe del hogar
+test_personas$jefe_hogar <- ifelse(test_personas$P6050 == 1, 1, 0)
+test_personas$jefe_hogar[test_personas$P6050 != 1] <- 0
+test_personas$jefe_hogar[test_personas$P6050 == "."] <- 0
+test_personas$jefe_hogar[is.na(test_personas$jefe_hogar)] <- 0
+
+# Hijos en el hogar
+
+test_personas$hijos_hogar <- ifelse(test_personas$P6050 == 3, 1, 0)
+test_personas$hijos_hogar[test_personas$P6050 != 3] <- 0
+test_personas$hijos_hogar[test_personas$P6050 == "."] <- 0
+test_personas$hijos_hogar[is.na(test_personas$hijos_hogar)] <- 0
+
+# Nivel Primaria
+
+test_personas$primaria <- ifelse(test_personas$P6210 == 1, 1, 0)
+test_personas$primaria[test_personas$P6210 == "."] <- 0
+test_personas$primaria[is.na(test_personas$primaria)] <- 0
+
+# Nivel Secundaria
+
+test_personas$secundaria <- ifelse(test_personas$P6210 == 4, 1, 0)
+test_personas$secundaria[test_personas$P6210 == "."] <- 0
+test_personas$secundaria[is.na(test_personas$secundaria)] <- 0
+
+# Nivel Media
+
+test_personas$media <- ifelse(test_personas$P6210 == 5, 1, 0)
+test_personas$media[test_personas$P6210 == "."] <- 0
+test_personas$media[is.na(test_personas$media)] <- 0
+
+# Nivel Superior
+
+test_personas$superior <- ifelse(test_personas$P6210 == 6, 1, 0)
+test_personas$superior[test_personas$P6210 == "."] <- 0
+test_personas$superior[is.na(test_personas$superior)] <- 0
+
+# Experiencia trabajo actual
+
+test_personas <- rename(test_personas, c("exp_trab_actual" = "P6426"))
+
+# Horas de trabajo a la semana
+
+test_personas <- rename(test_personas, c("horas_trab_semana" = "P6800"))
+
+
+# Ciudad
+
+test_personas <- rename(test_personas, c("ciudad" = "Dominio"))
+
+
+# Imputación de experiencia
+
+test_personas$exp_trab_actual <- ifelse(test_personas$edad < 18 & 
+                                          is.na(test_personas$exp_trab_actual), 0, 
+                                        test_personas$exp_trab_actual)
+
+test_personas <- test_personas %>% 
+  group_by(id) %>% 
+  mutate(mean_exp = mean(exp_trab_actual, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(exp_trab_actual = if_else(is.na(exp_trab_actual) & test_personas$edad >= 18, 
+                                   mean_exp, test_personas$exp_trab_actual))
+
+test_personas <- test_personas %>% 
+  group_by(id) %>% 
+  mutate(variable = ifelse(all(is.na(exp_trab_actual)), 0, 
+                           exp_trab_actual)) %>% 
+  ungroup() %>% 
+  mutate(exp_trab_actual = if_else(is.na(exp_trab_actual), 
+                                   variable, test_personas$exp_trab_actual))
+
+# Imputación de Horas trabajadas a la semana
+
+test_personas$horas_trab_semana <- ifelse(test_personas$edad < 18 & 
+                                            is.na(test_personas$horas_trab_semana), 0, 
+                                          test_personas$horas_trab_semana)
+
+test_personas <- test_personas %>% 
+  group_by(id) %>% 
+  mutate(mean_h = mean(horas_trab_semana, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(horas_trab_semana = if_else(is.na(horas_trab_semana) & test_personas$edad >= 18, 
+                                     mean_h, test_personas$horas_trab_semana))
+
+test_personas <- test_personas %>% 
+  group_by(id) %>% 
+  mutate(variable = ifelse(all(is.na(horas_trab_semana)), 0, 
+                           horas_trab_semana)) %>% 
+  ungroup() %>% 
+  mutate(horas_trab_semana = if_else(is.na(horas_trab_semana), 
+                                     variable, test_personas$horas_trab_semana))
+
+test_personas$Ingtot <- NA
+
+#Nos quedamos ocn las variables de interés
+
+test_personas <- subset(test_personas, select = c("id", "Orden", "Clase",
+                                                  "ciudad", "edad", "edad_2","ocupado", "mujer", 
+                                                  "estudiante", "busca_trabajo","jefe_hogar", 
+                                                  "ama_casa", "hijos_hogar", "primaria", 
+                                                  "secundaria", "media", "superior", "Ingtot",
+                                                  "exp_trab_actual",
+                                                  "horas_trab_semana"))
+
+test_personas$num_menores <- as.numeric(test_personas$edad < 18)
+
+# Pasar la base únicamente a hogares
+
+test_personas_hogar <- test_personas %>% group_by(id) %>%
+  summarize(edad = mean(edad),
+            edad_2 = mean(edad_2),
+            ocupado = mean(ocupado), #mean
+            mujer = mean(mujer), #mean
+            estudiante = mean(estudiante),
+            busca_trabajo = mean(busca_trabajo),
+            jefe_hogar = mean(jefe_hogar),
+            ama_casa =mean(ama_casa),
+            hijos_hogar = mean(hijos_hogar),
+            primaria = mean(primaria),
+            secundaria = mean(secundaria),
+            media = mean(media),
+            superior = mean(superior),
+            Ingtot = sum(Ingtot), #Se suma porque es por individuo
+            exp_trab_actual = mean(exp_trab_actual),
+            horas_trab_semana = mean(horas_trab_semana),
+            num_menores = sum(num_menores),
+            ciudad = first(ciudad))
+
+############
+## En la base test_hogares organizo las variables de interés
+
+# en la base train_hogares
+
+# Limpiando la base de datos
+
+# Arrienda
+test_hogares$arrienda <- ifelse(test_hogares$P5090 == 3, 1, 0)
+test_hogares$arrienda[test_hogares$P5090 != 3] <- 0
+test_hogares$arrienda[is.na(test_hogares$arrienda)] <- 0
+
+# Ciudad
+
+test_hogares <- rename(test_hogares, c("ciudad" = "Dominio"))
+
+# Número de Cuartos
+
+test_hogares <- rename(test_hogares, c("numero_cuartos" = "P5010"))
+
+# Número de personas
+
+test_hogares <- rename(test_hogares, c("numero_personas" = "Nper"))
+
+# Creao las variables faltantes
+test_hogares$Pobre <- NA
+test_hogares$Ingtotug <- NA
+
+# Nos quedamos con las variables de interés
+test_hogares_final <- subset(test_hogares, select = c("id", "Clase",
+                                                      "ciudad", "Ingtotug",  "Pobre", 
+                                                      "numero_personas", "arrienda"))
+
+
+# Haciendo join sobre la base train
+test <- left_join(test_personas_hogar,test_hogares_final)
+
+############
+
 
 # Compruebo que la imputación y base haya quedado sin missing
 # Ver variables con datos missing en la base completa train
@@ -381,3 +578,4 @@ ggplot(datos_miss_test, aes(x = reorder(skim_variable, +p_missing) , y =  p_miss
   theme(axis.text = element_text(size = 5)) 
 
 ############
+
