@@ -56,7 +56,7 @@ pre_process_personas<-  function(data, ...) {
     orden = Orden, # identificador de la persona dentro del hogar 
     mujer = ifelse(P6020==2,1,0), # Sexo, 2 mujer, 1 hombre 
     jefe = ifelse(P6050==1,1,0), # es jefe de hogar o no
-    # edad = P6040, # años cumplidos
+    edad = P6040, # años cumplidos
     # parentesco = factor(P6050,levels=c(1:9),labels=c('Jefe','Pareja','Hijo','Nieto','Otro pariente','Empleado','Pensionista','Trabajador','Otro no pariente')), # Parentesco con jefe de hogar
     salud = ifelse(P6090==1,1,0), # Afiliado a salud: 1 tiene, 2 no tiene, 9 no sabe
     regsalud = ifelse(P6100>2,0,1), # Regimen de salud: 1-contributivo, 2-especial, 3-subsidiado, 9-no sabe
@@ -64,7 +64,7 @@ pre_process_personas<-  function(data, ...) {
     # P6210s1 - grado hasta el que llego
     # P6240 - actividad en que ocupó el itmepo la semana pasada
     # Oficio
-    # P6426 - tiempo trabajando continuo
+    tiempo_con = P6426, #- tiempo trabajando continuo
     # P6430 - tipo de trabajo (obrero o trabajador particualr, de gobierno, domestico, independiente, patron, etc)
     # P6510 - horas extra?
     # P6545 - primas?
@@ -119,7 +119,8 @@ pre_process_personas<-  function(data, ...) {
     # Fex_dpto
   ) %>% 
     select(id, orden, mujer,jefe,salud,regsalud,nivel_educ,
-           pension,pet,desocupado, sub_trans, otros_ing, ayu_inst)
+           pension,pet,desocupado, sub_trans, otros_ing, ayu_inst, 
+           tiempo_con, edad)
   
   data <- data %>%
     mutate(
@@ -130,6 +131,7 @@ pre_process_personas<-  function(data, ...) {
     ) %>%
     select(id, orden, mujer,jefe,salud,regsalud,nivel_educ,
            pension,pet,desocupado, sub_trans, otros_ing, ayu_inst,
+           tiempo_con, edad
            )
   
 }
@@ -162,7 +164,7 @@ group_personas_hogar<-  function(data, ...) {
               sub_transporte = sum(sub_trans, na.rm = T), 
               otros_ing = sum(otros_ing, na.rm = T), 
               ayu_inst = sum(ayu_inst, na.rm = T),
-              #ing_arri = sum(ing_arri, na.rm = T)
+              tiempo_con = sum(tiempo_con, na.rm = T)
               
     )
 }
