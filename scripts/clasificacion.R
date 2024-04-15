@@ -13,7 +13,7 @@ p_load(tidyverse, # tidy-data
        adabag)   
 
 # 1. Elegir si se prueba con particiones o sobre los datos completos
-opt <- 0 # 1 se hacen particiones para medir F1 de antemano, 0 se deja completo los datos
+opt <- 1 # 1 se hacen particiones para medir F1 de antemano, 0 se deja completo los datos
 
 # 2. Cargar datos
 # setwd("C:/Users/Paula Osorio/Documents/Git Hub Repositorios/problem_set_2")
@@ -84,7 +84,7 @@ write.csv(predictSample,"stores/classification_elasticnet.csv", row.names = FALS
 
 
 ##################################################################################
-##########################6.2 Random Forest
+######################### 6.2 Random Forest
 ################################################################################
 
 #Revisar mejores hiperparámetros de variables y complejidad del arbol(nod_size)
@@ -157,13 +157,32 @@ ggplot(imp2, aes(x = reorder(variables, importance) , y =importance )) +
 #########Boosting
 #################################################################
 
-adagrid<-  expand.grid(
-  mfinal = c( 50, 300 ,500),
-  maxdepth = c(1,2,5),
-  coeflearn = c('Breiman','Freund'))
+# adagrid<-  expand.grid(
+#   mfinal = c( 50, 300 ,500),
+#   maxdepth = c(1,2,5),
+#   coeflearn = c('Breiman','Freund'))
 
-adaboost_tree <- train(Default~duration+amount+installment+age+
-                         history+purpose+foreign+rent,
+#adagrid<-  expand.grid(
+#  mfinal = c(500,750),
+#  maxdepth = c(5,10),
+#  coeflearn = c('Breiman'))
+
+adagrid<-  expand.grid(
+  mfinal = c(750,950),
+  maxdepth = c(5,10),
+  coeflearn = c('Breiman'))
+
+fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))  ## Para usar ROC) (u otras más) para tuning
+
+
+ctrl<- trainControl(method = "cv",
+                    number = 5,
+                    summaryFunction = fiveStats,
+                    classProbs = TRUE, 
+                    verbose=FALSE,
+                    savePredictions = T)
+
+adaboost_tree <- train(Pobre~tot_cuartos_dorm+tot_cuartos+nper+npet+ndes+npension+nsalud+jefe_educ_sup, 
                        data = train, 
                        method = "AdaBoost.M1",  # para implementar el algoritmo antes descrito
                        trControl = ctrl,
@@ -173,18 +192,23 @@ adaboost_tree <- train(Default~duration+amount+installment+age+
 
 adaboost_tree
 
-Pobre<- ifelse(test$Pobre=="Yes",1,0)#devolver la configuración de pobre a 1s y 0s
-
 boost_pred <- predict(adaboost_tree,
                       newdata = test, 
                       type = "prob")  
 
-pred <- as.data.frame( boost_pred$predictions )
+predictSample <- test   %>% 
+  mutate(pobre_lab = ifelse(boost_pred$Yes > boost_pred$No,1,0)   
+  )  %>% select(id,pobre_lab)
+
+predictSample <- predictSample   %>% 
+  mutate(pobre_lab = factor(pobre_lab, levels=c(1,0), labels=c("Yes","No"))
+  )  %>% select(id,pobre_lab)
+
 
 if (opt==1){
   #Obtener F1 con datos de submuestra
   #dependiendo de qué resulta de bagged_pred o de pred, esa es la variable que va en data=
-  confusionMatrix(data = test$prediccion_pobre, reference = test$real_pobre, mode = "prec_recall")
+  confusionMatrix(data = predictSample$pobre_lab, reference = test$Pobre, mode = "prec_recall")
 }
 
 # Subir resultado a kaggle
