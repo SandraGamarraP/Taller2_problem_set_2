@@ -99,7 +99,7 @@ predict_elasticnet1 <- test   %>%
 predictSample_net1 <- test %>%
   mutate(pobre_lab = ifelse(predict_elasticnet1 > umbral, 0, 1))  %>% select(id, Pobre)
 
-write.csv(predictSample_net1,"stores/Prediction_elasticnet.csv", row.names = FALSE)
+write.csv(predictSample_net1,"stores/Prediction_elasticnet1.csv", row.names = FALSE)
 
 
 confusionMatrix(data = as.factor(predictSample_net1$pobre_lab),
