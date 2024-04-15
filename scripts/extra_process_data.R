@@ -179,6 +179,59 @@ test <- test %>%
     porc_des = ndes/npet
   )
 
+# En la base train remplazo por cero el valor único valor perdido para porc_educ_sup, porc_pension y porc_des
+train$porc_pension <- ifelse(is.na(train$porc_pension), 0, train$porc_pension)
+train$porc_educ_sup <- ifelse(is.na(train$porc_educ_sup), 0, train$porc_educ_sup)
+train$porc_des <- ifelse(is.na(train$porc_des), 0, train$porc_des)
+
+# En la base test remplazo por cero el valor único valor perdido para porc_educ_sup, porc_pension y porc_des
+test$porc_pension <- ifelse(is.na(test$porc_pension), 0, test$porc_pension)
+test$porc_educ_sup <- ifelse(is.na(test$porc_educ_sup), 0, test$porc_educ_sup)
+test$porc_des <- ifelse(is.na(test$porc_des), 0, test$porc_des)
+
+# Compruebo que la imputación y base haya quedado sin missing
+# Ver variables con datos missing en la base completa train
+datos_miss_train <- skim(train) %>% select( skim_variable, n_missing)
+
+Nobs= nrow(train) 
+Nobs
+
+datos_miss_train<- datos_miss_train %>% mutate(p_missing= n_missing/Nobs)
+head(datos_miss_train)
+
+# Ordenar variables con mayor número de missing
+datos_miss_train <- datos_miss_train %>% arrange(-n_missing)
+datos_miss_train <- datos_miss_train %>% filter(n_missing!= 0)
+
+#Visualizando la estructura de los missing
+ggplot(datos_miss_train, aes(x = reorder(skim_variable, +p_missing) , y =  p_missing)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  coord_flip() +
+  labs(title = "N Missing Per Variable", x = "Var Name", y = "Missings")+ 
+  theme(axis.text = element_text(size = 5)) 
+
+# Ver variables con datos missing en la base completa test
+datos_miss_test <- skim(test) %>% select( skim_variable, n_missing)
+
+Nobs= nrow(test) 
+Nobs
+
+datos_miss_test <- datos_miss_test %>% mutate(p_missing= n_missing/Nobs)
+head(datos_miss_test)
+
+# Ordenar variables con mayor número de missing
+datos_miss_test <- datos_miss_test %>% arrange(-n_missing)
+datos_miss_test<- datos_miss_test %>% filter(n_missing!= 0)
+
+#Visualizando la estructura de los missing
+ggplot(datos_miss_test, aes(x = reorder(skim_variable, +p_missing) , y =  p_missing)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  coord_flip() +
+  labs(title = "N Missing Per Variable", x = "Var Name", y = "Missings")+ 
+  theme(axis.text = element_text(size = 5)) 
+
+############
+
 # 6. Exportación de bases de datos
 write.csv(train, "stores/train_procesado.csv", row.names = FALSE)
 write.csv(test, "stores/test_procesado.csv", row.names = FALSE)
