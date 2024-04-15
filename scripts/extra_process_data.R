@@ -1,4 +1,13 @@
-# Maseo de Datos
+############################################
+########## Problem set 2            ########
+###### Big Data y Maching Learning #########
+###### Paula Osorio:201327186   ############
+###### Sandra Gamarra: 202225782 ###########
+###### Erika M. Macías:  Educacion continua#  
+###### Ingrith Sierra: 201720654    ########
+############################################
+
+# Manejo de Datos
 
 rm(list = ls())
 
