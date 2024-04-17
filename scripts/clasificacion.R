@@ -131,7 +131,6 @@ predictSample <- test   %>%
 
 if (opt==1){
   #Obtener F1 con datos de submuestra
-  #dependiendo de qué resulta de bagged_pred o de pred, esa es la variable que va en data=
   confusionMatrix(data = predictSample$pobre_lab, reference = test$Pobre, mode = "prec_recall")
 }
 
@@ -154,7 +153,7 @@ ggplot(imp2, aes(x = reorder(variables, importance) , y =importance )) +
 
 
 ###################################################################
-#########Boosting
+######### 6.3 Boosting
 #################################################################
 
 # adagrid<-  expand.grid(
@@ -207,7 +206,6 @@ predictSample <- predictSample   %>%
 
 if (opt==1){
   #Obtener F1 con datos de submuestra
-  #dependiendo de qué resulta de bagged_pred o de pred, esa es la variable que va en data=
   confusionMatrix(data = predictSample$pobre_lab, reference = test$Pobre, mode = "prec_recall")
 }
 
